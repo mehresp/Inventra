@@ -1,0 +1,5 @@
+.venv
+.idea
+.cursor
+.env
+__pycahce__/
