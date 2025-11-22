@@ -12,9 +12,19 @@ class Requisition(models.Model):
         REJECTED = "Rejected", "Rejected"
         FULFILLED = "Fulfilled", "Fulfilled"
 
+    class DeptLab(models.TextChoices):
+        CHEMISTRY = "Chemistry", "Chemistry"
+        BIOLOGY = "Biology", "Biology"
+        PHYSICS = "Physics", "Physics"
+        COMPUTER = "Computer", "Computer Science"
+        ENGINEERING = "Engineering", "Engineering"
+        ADMIN = "Admin", "Administration"
+        OTHER = "Other", "Other"
+
     req_no = models.CharField(max_length=64, unique=True)
     for_requester = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="requisitions")
-    dept_lab = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
+    dept_lab = models.CharField(max_length=32, choices=DeptLab.choices)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
     needed_by = models.DateField()
     notes = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
