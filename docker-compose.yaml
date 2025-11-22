@@ -1,5 +1,164 @@
+version: '3.8'
+
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: inventra_db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-inventra}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - inventra_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: inventra_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redisdata:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - inventra_network
+
+  api:
+    build:
+      context: .
+      dockerfile: Ops/Backend/Dockerfile
+    container_name: inventra_api
+    command: sh -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 --workers 4 --timeout 120 Inventra.wsgi:application"
+    volumes:
+      - ./Backend/Inventra:/app/Inventra
+      - staticfiles:/app/staticfiles
+      - media:/app/media
+      - logs:/app/logs
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DEBUG=${DEBUG:-False}
+      - DB_NAME=${DB_NAME:-inventra}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      - JWT_ACCESS_TTL=${JWT_ACCESS_TTL:-900}
+      - JWT_REFRESH_TTL=${JWT_REFRESH_TTL:-2592000}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - inventra_network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Ops/Frontend/Dockerfile
+    container_name: inventra_frontend
+    volumes:
+      - ./Frontend/Inventra:/app
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      - api
+    networks:
+      - inventra_network
+
+  celery:
+    build:
+      context: .
+      dockerfile: Ops/Backend/Dockerfile
+    container_name: inventra_celery
+    command: celery -A Inventra worker --loglevel=info
+    volumes:
+      - ./Backend/Inventra:/app/Inventra
+      - logs:/app/logs
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DEBUG=${DEBUG:-False}
+      - DB_NAME=${DB_NAME:-inventra}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - inventra_network
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Ops/Backend/Dockerfile
+    container_name: inventra_celery_beat
+    command: celery -A Inventra beat --loglevel=info
+    volumes:
+      - ./Backend/Inventra:/app/Inventra
+      - logs:/app/logs
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DEBUG=${DEBUG:-False}
+      - DB_NAME=${DB_NAME:-inventra}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - inventra_network
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+  staticfiles:
+    driver: local
+  media:
+    driver: local
+  logs:
+    driver: local
 
 networks:
-
-voluems:
+  inventra_network:
+    driver: bridge
