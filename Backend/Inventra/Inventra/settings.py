@@ -234,7 +234,7 @@ SIMPLE_JWT = {
 # API Documentation (drf-spectacular)
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Inventra API',
-    'DESCRIPTION': 'Inventory Management System API',
+    'DESCRIPTION': 'Inventory Tracking App API',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
