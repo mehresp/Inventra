@@ -1,7 +1,7 @@
 # Multi-stage build for Django backend
 
 # Stage 1: Build stage
-FROM python:3.13-slim as builder
+FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
