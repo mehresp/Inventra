@@ -8,10 +8,10 @@ from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters import rest_framework as django_filters
 
-from ..models import Item
+from ..models import Item, Warehouse, Category
 from ..serializers import ItemSerializer
 from ..permissions import CanManageItems, CanViewItems
-from ..services import StockService
+from ..services import StockService, ReportService
 
 
 class ItemFilter(django_filters.FilterSet):
@@ -25,9 +25,26 @@ class ItemFilter(django_filters.FilterSet):
         fields = ['is_active', 'category', 'below_min', 'warehouse']
     
     def filter_below_min(self, queryset, name, value):
-        if value:
-            return queryset.filter(is_active=True)
-        return queryset
+        if not value:
+            return queryset
+        # Filter items with stock below minimum (uses ReportService logic)
+        warehouse_id = self.data.get('warehouse')
+        category_id = self.data.get('category')
+        warehouse = None
+        category = None
+        if warehouse_id:
+            try:
+                warehouse = Warehouse.objects.get(id=warehouse_id)
+            except (Warehouse.DoesNotExist, ValueError):
+                pass
+        if category_id:
+            try:
+                category = Category.objects.get(id=category_id)
+            except (Category.DoesNotExist, ValueError):
+                pass
+        shortages = ReportService.get_shortages(warehouse=warehouse, category=category)
+        item_ids = [s['item'].id for s in shortages]
+        return queryset.filter(id__in=item_ids) if item_ids else queryset.none()
     
     def filter_warehouse(self, queryset, name, value):
         # This is handled in serializer context
