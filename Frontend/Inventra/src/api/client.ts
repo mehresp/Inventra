@@ -4,7 +4,9 @@
 import axios, { type AxiosInstance, AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import type { ApiError } from '../types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+// Use relative URL when served via nginx (Docker/production) so API goes through proxy.
+// For local dev, VITE_API_BASE_URL can be set to 'http://localhost:8000/api/v1' or use vite proxy with '/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
 
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
@@ -73,12 +75,22 @@ apiClient.interceptors.response.use(
 
 export default apiClient;
 
-// Helper function to handle API errors
+// Helper function to handle API errors (400, 403, etc.)
 export const handleApiError = (error: unknown): string => {
   if (axios.isAxiosError<ApiError>(error)) {
     const apiError = error.response?.data;
     if (apiError?.error) {
-      return apiError.error.message || 'An error occurred';
+      const msg = apiError.error.message || 'An error occurred';
+      const details = apiError.error.details;
+      // For 400 validation errors, details may contain field-level errors
+      if (details && typeof details === 'object' && !('detail' in details)) {
+        const fieldErrors = Object.entries(details)
+          .filter(([, v]) => Array.isArray(v) && v.length > 0)
+          .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
+          .join('; ');
+        return fieldErrors || msg;
+      }
+      return msg;
     }
     if (error.message) {
       return error.message;
