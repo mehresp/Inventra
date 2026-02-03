@@ -1,12 +1,13 @@
-import uuid
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
+
 class AuditLog(models.Model):
     for_actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="audit_logs")
     entity = models.CharField(max_length=64)
-    entity_id = models.UUIDField(default=uuid.uuid4)
+    # Store entity PK as string (Item, Warehouse, etc. use integer PKs; some may use UUID)
+    entity_id = models.CharField(max_length=64)
     action = models.CharField(max_length=32)
     before = models.JSONField(null=True, blank=True)
     after = models.JSONField(null=True, blank=True)
