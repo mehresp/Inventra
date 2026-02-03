@@ -23,11 +23,11 @@ export const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
-
+    // Keep previous error visible until we have a new result
     try {
       await login(username, password);
+      setError('');
       navigate('/dashboard');
     } catch (err) {
       setError(handleApiError(err));
@@ -53,9 +53,9 @@ export const LoginPage = () => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+              <Alert variant="destructive" className="rounded-md border-destructive bg-destructive/15 text-destructive [&>*]:text-destructive" role="alert">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <AlertDescription className="font-medium">{error}</AlertDescription>
               </Alert>
             )}
             <div className="space-y-2">
