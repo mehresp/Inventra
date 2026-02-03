@@ -14,6 +14,10 @@ RUN npm ci
 # Copy source code
 COPY Frontend/Inventra/ .
 
+# API base URL for production - requests go through nginx proxy (same origin)
+ARG VITE_API_BASE_URL=/api/v1
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 # Build application
 RUN npm run build
 
