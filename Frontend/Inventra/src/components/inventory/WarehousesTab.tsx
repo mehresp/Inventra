@@ -20,7 +20,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Skeleton } from '../ui/skeleton';
 import { CardHeader, CardTitle, CardDescription } from '../ui/card';
-import { Plus, Edit, Trash2, PackageX } from 'lucide-react';
+import { Alert, AlertDescription } from '../ui/alert';
+import { handleApiError } from '../../api/client';
+import { Plus, Edit, Trash2, PackageX, AlertCircle } from 'lucide-react';
 import type { Warehouse } from '../../types';
 
 export const WarehousesTab = () => {
@@ -198,6 +200,8 @@ const WarehouseDialog = ({ open, onClose, warehouse, onSuccess }: WarehouseDialo
     }
   }, [open, warehouse]);
 
+  const [submitError, setSubmitError] = useState('');
+
   const createMutation = useMutation({
     mutationFn: (data: Partial<Warehouse>) => {
       if (warehouse) {
@@ -206,22 +210,34 @@ const WarehouseDialog = ({ open, onClose, warehouse, onSuccess }: WarehouseDialo
       return warehousesApi.create(data);
     },
     onSuccess: () => {
+      setSubmitError('');
+      onClose();
       onSuccess();
+    },
+    onError: (err: Error) => {
+      setSubmitError(handleApiError(err));
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError('');
     createMutation.mutate(formData);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(open) => { if (!open) setSubmitError(''); onClose(); }}>
       <DialogContent className="sm:max-w-md" showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>{warehouse ? t('warehouses.edit') : t('warehouses.addNew')}</DialogTitle>
         </DialogHeader>
-        <form id="warehouse-form" onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {submitError && (
+            <Alert variant="destructive" className="rounded-md">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
+          )}
           <div>
             <label className="block text-sm font-medium mb-1">{t('warehouses.name')} *</label>
             <Input
@@ -250,15 +266,15 @@ const WarehouseDialog = ({ open, onClose, warehouse, onSuccess }: WarehouseDialo
               {t('status.active')}
             </label>
           </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? t('warehouses.saving') : warehouse ? t('common.update') : t('common.create')}
+            </Button>
+          </DialogFooter>
         </form>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="submit" form="warehouse-form" disabled={createMutation.isPending}>
-            {createMutation.isPending ? t('warehouses.saving') : warehouse ? t('common.update') : t('common.create')}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

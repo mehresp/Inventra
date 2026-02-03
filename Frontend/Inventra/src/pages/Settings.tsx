@@ -220,7 +220,7 @@ export const SettingsPage = () => {
           <DialogHeader>
             <DialogTitle>{t('settings.addUser')}</DialogTitle>
           </DialogHeader>
-          <form id="add-user-form" onSubmit={handleCreateUser} className="space-y-4">
+          <form onSubmit={handleCreateUser} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">{t('login.username')} *</label>
               <Input
@@ -284,15 +284,15 @@ export const SettingsPage = () => {
                 placeholder={t('common.lastName')}
               />
             </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowAddUserDialog(false)}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit" disabled={createUserMutation.isPending}>
+                {createUserMutation.isPending ? t('common.loading') : t('common.create')}
+              </Button>
+            </DialogFooter>
           </form>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setShowAddUserDialog(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button type="submit" form="add-user-form" disabled={createUserMutation.isPending}>
-              {createUserMutation.isPending ? t('common.loading') : t('common.create')}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -302,7 +302,7 @@ export const SettingsPage = () => {
           <DialogHeader>
             <DialogTitle>{t('settings.editUser')}</DialogTitle>
           </DialogHeader>
-          <form id="edit-user-form" onSubmit={handleUpdateUser} className="space-y-4">
+          <form onSubmit={handleUpdateUser} className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">{t('login.username')} *</label>
               <Input
@@ -367,18 +367,18 @@ export const SettingsPage = () => {
                 placeholder={t('common.lastName')}
               />
             </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => {
+                setShowEditUserDialog(false);
+                setEditingUser(null);
+              }}>
+                {t('common.cancel')}
+              </Button>
+              <Button type="submit">
+                {t('common.update')}
+              </Button>
+            </DialogFooter>
           </form>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => {
-              setShowEditUserDialog(false);
-              setEditingUser(null);
-            }}>
-              {t('common.cancel')}
-            </Button>
-            <Button type="submit" form="edit-user-form">
-              {t('common.update')}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

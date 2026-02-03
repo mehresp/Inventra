@@ -21,7 +21,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Skeleton } from '../ui/skeleton';
 import { CardHeader, CardTitle, CardDescription } from '../ui/card';
-import { Plus, Search, ArrowLeftRight, PackageX } from 'lucide-react';
+import { Alert, AlertDescription } from '../ui/alert';
+import { handleApiError } from '../../api/client';
+import { Plus, Search, ArrowLeftRight, PackageX, AlertCircle } from 'lucide-react';
 import type { Movement } from '../../types';
 
 export const MovementsTab = () => {
@@ -209,38 +211,46 @@ const NewMovementModal = ({ open, onClose, onSuccess }: NewMovementModalProps) =
   const warehouses = warehousesData?.results || [];
   const { user } = useAuth();
 
+  const [submitError, setSubmitError] = useState('');
+
   const createMutation = useMutation({
     mutationFn: (data: Partial<Movement>) => movementsApi.create(data),
     onSuccess: () => {
+      setSubmitError('');
+      onClose();
       onSuccess();
+    },
+    onError: (err: Error) => {
+      setSubmitError(handleApiError(err));
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setSubmitError('');
+
     if (formData.type === 'OUT' && !formData.for_warehouse_from) {
-      alert(t('movements.sourceRequired'));
+      setSubmitError(t('movements.sourceRequired'));
       return;
     }
 
     if (formData.type === 'TRANSFER' && (!formData.for_warehouse_from || !formData.for_warehouse_to)) {
-      alert(t('movements.bothRequired'));
+      setSubmitError(t('movements.bothRequired'));
       return;
     }
 
     if (formData.type === 'RETURN' && (!formData.for_warehouse_from || !formData.for_warehouse_to)) {
-      alert(t('movements.bothRequired'));
+      setSubmitError(t('movements.bothRequired'));
       return;
     }
 
     if (formData.type === 'IN' && !formData.for_warehouse_to) {
-      alert(t('movements.destRequired'));
+      setSubmitError(t('movements.destRequired'));
       return;
     }
 
     if (formData.type === 'ADJUST' && !formData.for_warehouse_from) {
-      alert(t('movements.sourceRequired'));
+      setSubmitError(t('movements.sourceRequired'));
       return;
     }
 
@@ -255,12 +265,18 @@ const NewMovementModal = ({ open, onClose, onSuccess }: NewMovementModalProps) =
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(open) => { if (!open) setSubmitError(''); onClose(); }}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto" showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>{t('movements.recordNew')}</DialogTitle>
         </DialogHeader>
-      <form id="movement-form" onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {submitError && (
+            <Alert variant="destructive" className="rounded-md">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
+          )}
         <div>
           <label className="block text-sm font-medium mb-1">{t('movements.type')} *</label>
           <Select
@@ -445,15 +461,15 @@ const NewMovementModal = ({ open, onClose, onSuccess }: NewMovementModalProps) =
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           />
         </div>
-      </form>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="submit" form="movement-form" disabled={createMutation.isPending}>
-            {createMutation.isPending ? t('movements.creating') : t('common.create')}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? t('movements.creating') : t('common.create')}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

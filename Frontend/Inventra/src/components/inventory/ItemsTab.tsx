@@ -20,7 +20,9 @@ import { itemsApi, categoriesApi } from '../../api/endpoints';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { Skeleton } from '../ui/skeleton';
-import { Plus, Search, Edit, Trash2, PackageX } from 'lucide-react';
+import { Alert, AlertDescription } from '../ui/alert';
+import { handleApiError } from '../../api/client';
+import { Plus, Search, Edit, Trash2, PackageX, AlertCircle } from 'lucide-react';
 import type { Item } from '../../types';
 
 export const ItemsTab = () => {
@@ -258,6 +260,8 @@ const ItemDialog = ({ open, onClose, item, categories, onSuccess }: ItemDialogPr
     }
   }, [open, item]);
 
+  const [submitError, setSubmitError] = useState('');
+
   const createMutation = useMutation({
     mutationFn: (data: Partial<Item>) => {
       if (item) {
@@ -266,12 +270,18 @@ const ItemDialog = ({ open, onClose, item, categories, onSuccess }: ItemDialogPr
       return itemsApi.create(data);
     },
     onSuccess: () => {
+      setSubmitError('');
+      onClose();
       onSuccess();
+    },
+    onError: (err: Error) => {
+      setSubmitError(handleApiError(err));
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError('');
     createMutation.mutate({
       ...formData,
       for_category: Number(formData.for_category),
@@ -279,12 +289,18 @@ const ItemDialog = ({ open, onClose, item, categories, onSuccess }: ItemDialogPr
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(open) => { if (!open) setSubmitError(''); onClose(); }}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto" showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>{item ? t('items.editItem') : t('items.addNew')}</DialogTitle>
         </DialogHeader>
-        <form id="item-form" onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {submitError && (
+            <Alert variant="destructive" className="rounded-md">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
+          )}
           <div>
             <label className="block text-sm font-medium mb-1">{t('items.itemCode')} *</label>
             <Input
@@ -357,15 +373,15 @@ const ItemDialog = ({ open, onClose, item, categories, onSuccess }: ItemDialogPr
               {t('status.active')}
             </label>
           </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? t('items.saving') : item ? t('common.update') : t('common.create')}
+            </Button>
+          </DialogFooter>
         </form>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="submit" form="item-form" disabled={createMutation.isPending}>
-            {createMutation.isPending ? t('items.saving') : item ? t('common.update') : t('common.create')}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

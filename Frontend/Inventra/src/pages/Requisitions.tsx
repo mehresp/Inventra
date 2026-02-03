@@ -21,7 +21,9 @@ import { requisitionsApi, itemsApi } from '../api/endpoints';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { CardDescription } from '../components/ui/card';
-import { FileText, Plus, Building2, Calendar, PackageX, Package } from 'lucide-react';
+import { FileText, Plus, Building2, Calendar, PackageX, Package, AlertCircle } from 'lucide-react';
+import { handleApiError } from '../api/client';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import type { Requisition } from '../types';
 
 export const RequisitionsPage = () => {
@@ -466,6 +468,7 @@ const CreateRequisitionModal = ({ open, onClose, onSuccess }: CreateRequisitionM
     notes: '',
     lines: [{ for_item: '', requested_qty: 0 }] as Array<{ for_item: string; requested_qty: number }>,
   });
+  const [error, setError] = useState('');
 
   const { data: itemsData } = useQuery({
     queryKey: ['items'],
@@ -478,12 +481,17 @@ const CreateRequisitionModal = ({ open, onClose, onSuccess }: CreateRequisitionM
   const createMutation = useMutation({
     mutationFn: (data: Partial<Requisition>) => requisitionsApi.create(data),
     onSuccess: () => {
+      setError('');
       onSuccess();
+    },
+    onError: (err) => {
+      setError(handleApiError(err));
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     createMutation.mutate({
       ...formData,
       for_requester: user?.id,
@@ -526,14 +534,30 @@ const CreateRequisitionModal = ({ open, onClose, onSuccess }: CreateRequisitionM
         <DialogHeader>
           <DialogTitle>{t('requisitions.create')}</DialogTitle>
         </DialogHeader>
-      <form id="create-req-form" onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <Alert variant="destructive" className="rounded-md shrink-0">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
         <div>
           <label className="block text-sm font-medium mb-1">{t('requisitions.departmentLab')} *</label>
-          <Input
+          <Select
             value={formData.dept_lab}
             onChange={(e) => setFormData({ ...formData, dept_lab: e.target.value })}
             required
-          />
+            className="w-full"
+          >
+            <option value="">{t('requisitions.selectDeptLab')}</option>
+            <option value="Chemistry">Chemistry</option>
+            <option value="Biology">Biology</option>
+            <option value="Physics">Physics</option>
+            <option value="Computer Science">Computer Science</option>
+            <option value="Engineering">Engineering</option>
+            <option value="Administration">Administration</option>
+            <option value="Other">Other</option>
+          </Select>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">{t('common.neededBy')} *</label>
@@ -599,15 +623,15 @@ const CreateRequisitionModal = ({ open, onClose, onSuccess }: CreateRequisitionM
             ))}
           </div>
         </div>
-      </form>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button type="submit" form="create-req-form" disabled={createMutation.isPending}>
-            {createMutation.isPending ? t('requisitions.creating') : t('common.create')}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t('common.cancel')}
+            </Button>
+            <Button type="submit" disabled={createMutation.isPending}>
+              {createMutation.isPending ? t('requisitions.creating') : t('common.create')}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
@@ -697,7 +721,7 @@ const RejectRequisitionModal = ({
             {t('requisitions.rejectionReason')}
           </DialogDescription>
         </DialogHeader>
-        <form id="reject-req-form" onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium mb-1">
@@ -711,20 +735,19 @@ const RejectRequisitionModal = ({
               />
             </div>
           </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="submit"
+              variant="destructive"
+              disabled={isRejecting}
+            >
+              {isRejecting ? t('requisitions.rejecting') : t('requisitions.reject')}
+            </Button>
+          </DialogFooter>
         </form>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
-            {t('common.cancel')}
-          </Button>
-          <Button 
-            type="submit" 
-            form="reject-req-form" 
-            variant="destructive"
-            disabled={isRejecting}
-          >
-            {isRejecting ? t('requisitions.rejecting') : t('requisitions.reject')}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
