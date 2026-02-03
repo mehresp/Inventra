@@ -76,11 +76,11 @@ Streamline the end‑to‑end flow and provide **trustworthy, queryable history*
 - **A11y**: WCAG AA contrast, full RTL/LTR, keyboard friendly.
 
 ## Architecture 🏗️
-- **Frontend**: React + Vite + TS + Tailwind + React Router + React Query + HeroUI.
+- **Frontend**: React + Vite + TS + Tailwind + React Router + React Query + shadcn/ui (Radix).
 - **Backend**: Python 3.12+ · Django 5 · **DRF** (+ Channels if needed).
-- **DB**: PostgreSQL (UUID pk, BTree/GIN indexes).
+- **DB**: PostgreSQL (BTree/GIN indexes).
 - **Cache/Broker**: Redis (throttling/locks/pubsub).
-- **Proxy**: Nginx (HTTPS).
+- **Proxy**: Nginx (reverse proxy; HTTPS in production).
 - **DevOps**: Docker Compose (dev), CI/CD.
 
 ## UI & Navigation 🧩
@@ -135,7 +135,7 @@ GET  /api/v1/items?search=&category=&below_min=
 POST /api/v1/movements {"type":"OUT","item_id":"…","qty":5}
 POST /api/v1/requisitions/{id}/approve
 POST /api/v1/counts/{id}/close
-GET  /api/v1/reports/shortage?warehouse=&category=
+GET  /api/v1/reports/shortages/?warehouse=&category=
 ```
 - **Pagination**: cursor (`next_cursor`, `prev_cursor`)
 - **Filtering**: `gte,lte,like,in`
@@ -145,39 +145,46 @@ GET  /api/v1/reports/shortage?warehouse=&category=
 
 ## Repository Structure 🗂️
 ```
-inventra/
-  frontend/  (react+vite+ts)
-  backend/   (django+drf)
-  infra/     (docker, nginx/traefik, ci)
-  docs/      (mkdocs/docusaurus, diagrams)
-  tests/     (unit, integration, e2e, stress)
+Inventra/
+  Backend/       Django + DRF (core app, management commands, tests)
+  Frontend/      React + Vite + TypeScript + Tailwind (Inventra app)
+  Ops/           Dockerfiles (Backend, Frontend), Nginx config
+  docker-compose.yaml
+  README.md
 ```
 
 ## Setup & Run 🚀
 ```bash
 # 1) clone
-git clone https://github.com/<you>/inventra.git
-cd inventra
+git clone https://github.com/<you>/Inventra.git
+cd Inventra
 
 # 2) env
-tcp .env.example .env  # or copy
+cp .env.example .env   # or create .env with required variables
 
 # 3) compose up
 docker compose up --build -d
 
-# 4) migrate & superuser
+# 4) migrate & superuser (optional)
 docker compose exec api python manage.py migrate
 docker compose exec api python manage.py createsuperuser
+
+# 5) seed demo data (roles, users with profiles, items, warehouses, lots, requisitions)
+docker compose exec api python manage.py seed_data
 ```
-- API: `http://localhost:8000/api/v1`
-- Web: `http://localhost:5173`
+**URLs:** API (Docker) `http://localhost:8080/api/v1` · Web (Docker) `http://localhost:8080` · Web (local dev) `http://localhost:5173`
 
 ## ENV Variables 🔧
 ```env
 DJANGO_SECRET_KEY=...
-DATABASE_URL=postgres://user:pass@db:5432/inventra
+DB_NAME=inventra
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_HOST=db
+DB_PORT=5432
 REDIS_URL=redis://redis:6379/0
-ALLOWED_HOSTS=*
+CELERY_BROKER_URL=redis://redis:6379/0
+CORS_ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://localhost:8080,http://localhost:5173,http://localhost:3000
 JWT_ACCESS_TTL=900
 JWT_REFRESH_TTL=2592000
 ```
@@ -185,8 +192,8 @@ JWT_REFRESH_TTL=2592000
 ## Testing 🧪
 ```bash
 docker compose exec api pytest -q
-# Optional fixtures
-docker compose exec api python manage.py loaddata seeds/*.json
+# Optional: seed demo data first
+docker compose exec api python manage.py seed_data
 ```
 
 ## Security 🛡️
@@ -254,27 +261,14 @@ Supplier ──< PurchaseOrder ──< Movement (ref_type=PO)
 - **Import Failure**: send error report to the executor.
 
 ## Infra (Compose) 🐳
-```yaml
-services:
-  api:
-    build: backend/
-    env_file: .env
-    depends_on: [db, redis]
-  frontend:
-    build: frontend/
-  db:
-    image: postgres:16
-    volumes: [pgdata:/var/lib/postgresql/data]
-  redis:
-    image: redis:7
-  proxy:
-    image: traefik
-volumes:
-  pgdata: {}
-```
+- **db**: PostgreSQL 16
+- **redis**: Redis 7
+- **api**: Django + Gunicorn (migrate + collectstatic on start)
+- **frontend**: Nginx serving built React app; proxies `/api/` to api
+- **celery** / **celery-beat**: background tasks
 
 ## Seed Data 🌱
-Roles (Admin, Storekeeper, Requester, Auditor), sample users, 10 items, 2 warehouses, 20 lots with varied expiries, multiple requisitions across states.
+Run `python manage.py seed_data` to create roles, users (with profiles), categories, items, warehouses, stock lots, movements, requisitions, suppliers. Demo logins: `admin`/`admin123`, `storekeeper`/`storekeeper123`, `requester`/`requester123`, `auditor`/`auditor123`. Re-running seed ensures existing seed users keep a profile and these passwords.
 
 ## Roadmap 🗺️
 - [ ] Supplier/PO module (full)
