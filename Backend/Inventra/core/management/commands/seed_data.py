@@ -41,13 +41,13 @@ class Command(BaseCommand):
             }
         )
         if created:
-            admin_user.set_password('admin123')
-            admin_user.save()
-            UserProfile.objects.get_or_create(
-                user=admin_user,
-                defaults={'for_role': admin_role}
-            )
             self.stdout.write(self.style.SUCCESS(f'Created admin user: {admin_user.username}'))
+        admin_user.set_password('admin123')
+        admin_user.save()
+        UserProfile.objects.get_or_create(
+            user=admin_user,
+            defaults={'for_role': admin_role}
+        )
 
         storekeeper_user, created = User.objects.get_or_create(
             username='storekeeper',
@@ -58,13 +58,13 @@ class Command(BaseCommand):
             }
         )
         if created:
-            storekeeper_user.set_password('storekeeper123')
-            storekeeper_user.save()
-            UserProfile.objects.get_or_create(
-                user=storekeeper_user,
-                defaults={'for_role': storekeeper_role}
-            )
             self.stdout.write(self.style.SUCCESS(f'Created storekeeper user: {storekeeper_user.username}'))
+        storekeeper_user.set_password('storekeeper123')
+        storekeeper_user.save()
+        UserProfile.objects.get_or_create(
+            user=storekeeper_user,
+            defaults={'for_role': storekeeper_role}
+        )
 
         requester_user, created = User.objects.get_or_create(
             username='requester',
@@ -75,13 +75,13 @@ class Command(BaseCommand):
             }
         )
         if created:
-            requester_user.set_password('requester123')
-            requester_user.save()
-            UserProfile.objects.get_or_create(
-                user=requester_user,
-                defaults={'for_role': requester_role}
-            )
             self.stdout.write(self.style.SUCCESS(f'Created requester user: {requester_user.username}'))
+        requester_user.set_password('requester123')
+        requester_user.save()
+        UserProfile.objects.get_or_create(
+            user=requester_user,
+            defaults={'for_role': requester_role}
+        )
 
         auditor_user, created = User.objects.get_or_create(
             username='auditor',
@@ -92,13 +92,13 @@ class Command(BaseCommand):
             }
         )
         if created:
-            auditor_user.set_password('auditor123')
-            auditor_user.save()
-            UserProfile.objects.get_or_create(
-                user=auditor_user,
-                defaults={'for_role': auditor_role}
-            )
             self.stdout.write(self.style.SUCCESS(f'Created auditor user: {auditor_user.username}'))
+        auditor_user.set_password('auditor123')
+        auditor_user.save()
+        UserProfile.objects.get_or_create(
+            user=auditor_user,
+            defaults={'for_role': auditor_role}
+        )
 
         # Create Categories
         self.stdout.write('Creating categories...')
