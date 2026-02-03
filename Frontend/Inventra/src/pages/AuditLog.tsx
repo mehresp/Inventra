@@ -12,8 +12,10 @@ import { Skeleton } from '../components/ui/skeleton';
 import { Button } from '../components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
 import { auditLogsApi } from '../api/endpoints';
+import { handleApiError } from '../api/client';
 import { useLanguage } from '../context/LanguageContext';
-import { Search, Eye, PackageX } from 'lucide-react';
+import { Search, Eye, PackageX, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '../components/ui/alert';
 
 export const AuditLogPage = () => {
   const { t } = useLanguage();
@@ -21,7 +23,7 @@ export const AuditLogPage = () => {
   const [entityFilter, setEntityFilter] = useState<string>('');
   const [actionFilter, setActionFilter] = useState<string>('');
 
-  const { data: logsData, isLoading } = useQuery({
+  const { data: logsData, isLoading, isError, error } = useQuery({
     queryKey: ['audit-logs', search, entityFilter, actionFilter],
     queryFn: () =>
       auditLogsApi.list({
@@ -124,6 +126,11 @@ export const AuditLogPage = () => {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
+          ) : isError ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{handleApiError(error)}</AlertDescription>
+            </Alert>
           ) : filteredLogs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <PackageX className="h-12 w-12 mb-2 opacity-50" />
