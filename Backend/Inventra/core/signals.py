@@ -38,6 +38,8 @@ def serialize_model_instance(instance):
     """
     Serialize model instance to JSON-compatible dict.
     """
+    from decimal import Decimal
+    
     if instance is None:
         return None
     
@@ -54,8 +56,11 @@ def serialize_model_instance(instance):
             # Skip many-to-many for now
         else:
             value = getattr(instance, field.name, None)
+            # Convert Decimal to float
+            if isinstance(value, Decimal):
+                value = float(value)
             # Convert datetime to string
-            if hasattr(value, 'isoformat'):
+            elif hasattr(value, 'isoformat'):
                 value = value.isoformat()
             data[field.name] = value
     return data

@@ -215,7 +215,8 @@ class RequisitionService:
             approver: User instance
             approved_lines: Dict mapping line_id to approved_qty
         """
-        if requisition.status != Requisition.Status.PENDING:
+        # Allow approving Draft, Pending, or Rejected requisitions
+        if requisition.status not in [Requisition.Status.DRAFT, Requisition.Status.PENDING, Requisition.Status.REJECTED]:
             raise ValidationError(f"Cannot approve requisition in status: {requisition.status}")
         
         # Update line approved quantities if provided
@@ -247,13 +248,24 @@ class RequisitionService:
         """
         Reject a requisition.
         """
-        if requisition.status != Requisition.Status.PENDING:
+        # Allow rejecting Draft, Pending, or Approved requisitions
+        if requisition.status not in [Requisition.Status.DRAFT, Requisition.Status.PENDING, Requisition.Status.APPROVED]:
             raise ValidationError(f"Cannot reject requisition in status: {requisition.status}")
+        
+        # If rejecting an Approved requisition, reset approved quantities
+        if requisition.status == Requisition.Status.APPROVED:
+            for line in requisition.lines.all():
+                line.approved_qty = 0
+                line.save()
         
         requisition.status = Requisition.Status.REJECTED
         requisition.for_approved_by = approver
         if reason:
-            requisition.notes = f"{requisition.notes or ''}\nRejection reason: {reason}".strip()
+            # Remove old rejection reason if exists
+            notes = requisition.notes or ''
+            if 'Rejection reason:' in notes:
+                notes = notes.split('Rejection reason:')[0].strip()
+            requisition.notes = f"{notes}\nRejection reason: {reason}".strip() if notes else f"Rejection reason: {reason}"
         requisition.save()
         
         return requisition

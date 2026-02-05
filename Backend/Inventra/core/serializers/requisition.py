@@ -3,6 +3,7 @@ Serializers for Requisition and RequisitionLine models.
 """
 from rest_framework import serializers
 from django.utils import timezone
+from decimal import Decimal
 from ..models import Requisition, RequisitionLine, Item, StockLot
 
 
@@ -11,6 +12,9 @@ class RequisitionLineSerializer(serializers.ModelSerializer):
     item_name = serializers.CharField(source='for_item.name', read_only=True)
     item_unit = serializers.CharField(source='for_item.unit', read_only=True)
     lot_batch_no = serializers.CharField(source='for_lot.batch_no', read_only=True)
+    requested_qty = serializers.DecimalField(max_digits=14, decimal_places=3, coerce_to_string=False)
+    approved_qty = serializers.DecimalField(max_digits=14, decimal_places=3, coerce_to_string=False)
+    issued_qty = serializers.DecimalField(max_digits=14, decimal_places=3, coerce_to_string=False)
     
     class Meta:
         model = RequisitionLine
@@ -20,6 +24,14 @@ class RequisitionLineSerializer(serializers.ModelSerializer):
             'for_lot', 'lot_batch_no', 'notes'
         ]
         read_only_fields = ['id']
+    
+    def to_representation(self, instance):
+        """Convert Decimal fields to float for JSON serialization."""
+        ret = super().to_representation(instance)
+        for field in ['requested_qty', 'approved_qty', 'issued_qty']:
+            if field in ret and isinstance(ret[field], Decimal):
+                ret[field] = float(ret[field])
+        return ret
 
 
 class RequisitionSerializer(serializers.ModelSerializer):

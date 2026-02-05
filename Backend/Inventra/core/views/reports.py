@@ -48,17 +48,30 @@ class ReportsViewSet(viewsets.ViewSet):
         
         shortages = ReportService.get_shortages(warehouse=warehouse, category=category)
         
+        from decimal import Decimal
         result = []
         for shortage in shortages:
+            current_stock = shortage['current_stock']
+            min_stock = shortage['min_stock']
+            shortage_val = shortage['shortage']
+            
+            # Convert Decimal to float
+            if isinstance(current_stock, Decimal):
+                current_stock = float(current_stock)
+            if isinstance(min_stock, Decimal):
+                min_stock = float(min_stock)
+            if isinstance(shortage_val, Decimal):
+                shortage_val = float(shortage_val)
+            
             result.append({
                 'item_id': shortage['item'].id,
                 'item_code': shortage['item'].code,
                 'item_name': shortage['item'].name,
                 'warehouse_id': shortage['warehouse'].id if shortage['warehouse'] else None,
                 'warehouse_name': shortage['warehouse'].name if shortage['warehouse'] else None,
-                'current_stock': float(shortage['current_stock']),
-                'min_stock': shortage['min_stock'],
-                'shortage': float(shortage['shortage'])
+                'current_stock': current_stock,
+                'min_stock': min_stock,
+                'shortage': shortage_val
             })
         
         return Response(result)
@@ -110,15 +123,28 @@ class ReportsViewSet(viewsets.ViewSet):
         
         flow = ReportService.get_monthly_flow(year, month, warehouse=warehouse, item=item)
         
+        # Convert Decimal to float
+        from decimal import Decimal
+        in_val = flow['in']
+        out_val = flow['out']
+        net_val = flow['net']
+        
+        if isinstance(in_val, Decimal):
+            in_val = float(in_val)
+        if isinstance(out_val, Decimal):
+            out_val = float(out_val)
+        if isinstance(net_val, Decimal):
+            net_val = float(net_val)
+        
         return Response({
             'period': flow['period'],
             'warehouse_id': flow['warehouse'].id if flow['warehouse'] else None,
             'warehouse_name': flow['warehouse'].name if flow['warehouse'] else None,
             'item_id': flow['item'].id if flow['item'] else None,
             'item_code': flow['item'].code if flow['item'] else None,
-            'in': float(flow['in']),
-            'out': float(flow['out']),
-            'net': float(flow['net'])
+            'in': in_val,
+            'out': out_val,
+            'net': net_val
         })
     
     @action(detail=False, methods=['get'])
@@ -175,7 +201,11 @@ class ReportsViewSet(viewsets.ViewSet):
             consumption[dept]['requisitions_count'] += 1
             for line in req.lines.all():
                 consumption[dept]['total_items'] += 1
-                consumption[dept]['total_qty'] += float(line.issued_qty)
+                from decimal import Decimal
+                qty_val = line.issued_qty
+                if isinstance(qty_val, Decimal):
+                    qty_val = float(qty_val)
+                consumption[dept]['total_qty'] += qty_val
         
         return Response(consumption)
     
@@ -195,9 +225,22 @@ class ReportsViewSet(viewsets.ViewSet):
         if count_id:
             counts = counts.filter(id=count_id)
         
+        from decimal import Decimal
         discrepancies = []
         for count in counts:
             for line in count.lines.filter(delta__ne=0):
+                system_qty = line.system_qty
+                counted_qty = line.counted_qty
+                delta = line.delta
+                
+                # Convert Decimal to float
+                if isinstance(system_qty, Decimal):
+                    system_qty = float(system_qty)
+                if isinstance(counted_qty, Decimal):
+                    counted_qty = float(counted_qty)
+                if isinstance(delta, Decimal):
+                    delta = float(delta)
+                
                 discrepancies.append({
                     'count_id': count.id,
                     'count_period': count.period,
@@ -206,9 +249,9 @@ class ReportsViewSet(viewsets.ViewSet):
                     'item_id': line.for_item.id,
                     'item_code': line.for_item.code,
                     'item_name': line.for_item.name,
-                    'system_qty': float(line.system_qty),
-                    'counted_qty': float(line.counted_qty),
-                    'delta': float(line.delta),
+                    'system_qty': system_qty,
+                    'counted_qty': counted_qty,
+                    'delta': delta,
                     'closed_at': count.closed_at.isoformat() if count.closed_at else None
                 })
         

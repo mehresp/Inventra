@@ -2,6 +2,7 @@
 Serializers for Movement model.
 """
 from rest_framework import serializers
+from decimal import Decimal
 from ..models import Movement, Item, Warehouse
 
 
@@ -12,6 +13,7 @@ class MovementSerializer(serializers.ModelSerializer):
     warehouse_to_name = serializers.CharField(source='for_warehouse_to.name', read_only=True)
     actor_username = serializers.CharField(source='for_actor.username', read_only=True)
     actor_full_name = serializers.SerializerMethodField()
+    qty = serializers.DecimalField(max_digits=14, decimal_places=3, coerce_to_string=False)
     
     class Meta:
         model = Movement
@@ -23,6 +25,13 @@ class MovementSerializer(serializers.ModelSerializer):
             'notes', 'created_at'
         ]
         read_only_fields = ['id', 'created_at', 'for_actor']
+    
+    def to_representation(self, instance):
+        """Convert Decimal fields to float for JSON serialization."""
+        ret = super().to_representation(instance)
+        if 'qty' in ret and isinstance(ret['qty'], Decimal):
+            ret['qty'] = float(ret['qty'])
+        return ret
     
     def get_actor_full_name(self, obj):
         user = obj.for_actor

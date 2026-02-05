@@ -228,7 +228,7 @@ const NewMovementModal = ({ open, onClose, onSuccess }: NewMovementModalProps) =
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
-
+    
     if (formData.type === 'OUT' && !formData.for_warehouse_from) {
       setSubmitError(t('movements.sourceRequired'));
       return;
@@ -261,6 +261,7 @@ const NewMovementModal = ({ open, onClose, onSuccess }: NewMovementModalProps) =
       for_warehouse_to: formData.for_warehouse_to ? Number(formData.for_warehouse_to) : undefined,
       for_actor: user?.id,
       ref_no: formData.ref_no || `MOV-${Date.now()}`,
+      qty: Number(formData.qty), // Ensure qty is a number, not Decimal
     });
   };
 
@@ -461,14 +462,14 @@ const NewMovementModal = ({ open, onClose, onSuccess }: NewMovementModalProps) =
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
           />
         </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              {t('common.cancel')}
-            </Button>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
             <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? t('movements.creating') : t('common.create')}
-            </Button>
-          </DialogFooter>
+            {createMutation.isPending ? t('movements.creating') : t('common.create')}
+          </Button>
+        </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

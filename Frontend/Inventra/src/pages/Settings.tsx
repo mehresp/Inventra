@@ -13,8 +13,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Select } from '../components/ui/select';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Globe } from 'lucide-react';
+import { Globe, AlertCircle } from 'lucide-react';
 import { authApi } from '../api/endpoints';
+import { Alert, AlertDescription } from '../components/ui/alert';
+import { handleApiError } from '../api/client';
 
 export const SettingsPage = () => {
   const { role } = useAuth();
@@ -40,6 +42,7 @@ export const SettingsPage = () => {
     last_name: '',
     role_id: '',
   });
+  const [createUserError, setCreateUserError] = useState('');
 
   // Roles mapping - در واقع باید از API گرفته شود اما فعلاً ثابت است
   const roles = [
@@ -68,6 +71,7 @@ export const SettingsPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setShowAddUserDialog(false);
+      setCreateUserError('');
       setFormData({
         username: '',
         email: '',
@@ -76,6 +80,9 @@ export const SettingsPage = () => {
         last_name: '',
         role_id: '',
       });
+    },
+    onError: (err) => {
+      setCreateUserError(handleApiError(err));
     },
   });
 
@@ -215,12 +222,23 @@ export const SettingsPage = () => {
       </Card>
 
       {/* Add User Dialog */}
-      <Dialog open={showAddUserDialog} onOpenChange={setShowAddUserDialog}>
+      <Dialog open={showAddUserDialog} onOpenChange={(open) => {
+        setShowAddUserDialog(open);
+        if (!open) {
+          setCreateUserError('');
+        }
+      }}>
         <DialogContent className="sm:max-w-md" showCloseButton={false}>
           <DialogHeader>
             <DialogTitle>{t('settings.addUser')}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleCreateUser} className="space-y-4">
+            {createUserError && (
+              <Alert variant="destructive" className="rounded-md">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{createUserError}</AlertDescription>
+              </Alert>
+            )}
             <div>
               <label className="block text-sm font-medium mb-1">{t('login.username')} *</label>
               <Input

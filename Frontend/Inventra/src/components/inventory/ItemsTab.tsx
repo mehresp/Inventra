@@ -240,7 +240,6 @@ const ItemDialog = ({ open, onClose, item, categories, onSuccess }: ItemDialogPr
     code: item?.code || '',
     name: item?.name || '',
     unit: item?.unit || '',
-    current_stock: item?.current_stock || 0,
     min_stock: item?.min_stock || 0,
     for_category: item?.for_category || '',
     is_active: item?.is_active !== undefined ? item.is_active : true,
@@ -252,7 +251,6 @@ const ItemDialog = ({ open, onClose, item, categories, onSuccess }: ItemDialogPr
         code: item?.code || '',
         name: item?.name || '',
         unit: item?.unit || '',
-        current_stock: item?.current_stock || 0,
         min_stock: item?.min_stock || 0,
         for_category: item?.for_category || '',
         is_active: item?.is_active !== undefined ? item.is_active : true,
@@ -282,10 +280,16 @@ const ItemDialog = ({ open, onClose, item, categories, onSuccess }: ItemDialogPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
-    createMutation.mutate({
-      ...formData,
+    const submitData: Partial<Item> = {
+      code: formData.code,
+      name: formData.name,
+      unit: formData.unit,
+      min_stock: formData.min_stock,
       for_category: Number(formData.for_category),
-    });
+      is_active: formData.is_active,
+    };
+    // Don't send current_stock as it's calculated, not editable
+    createMutation.mutate(submitData);
   };
 
   return (
@@ -326,16 +330,7 @@ const ItemDialog = ({ open, onClose, item, categories, onSuccess }: ItemDialogPr
               required
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">{t('items.currentStock')}</label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.current_stock}
-              onChange={(e) => setFormData({ ...formData, current_stock: Number(e.target.value) })}
-            />
-          </div>
+          {/* current_stock is calculated and not editable */}
           <div>
             <label className="block text-sm font-medium mb-1">{t('items.minStock')} *</label>
             <Input
@@ -373,14 +368,14 @@ const ItemDialog = ({ open, onClose, item, categories, onSuccess }: ItemDialogPr
               {t('status.active')}
             </label>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              {t('common.cancel')}
-            </Button>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>
+            {t('common.cancel')}
+          </Button>
             <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? t('items.saving') : item ? t('common.update') : t('common.create')}
-            </Button>
-          </DialogFooter>
+            {createMutation.isPending ? t('items.saving') : item ? t('common.update') : t('common.create')}
+          </Button>
+        </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

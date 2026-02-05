@@ -7,7 +7,8 @@ import { ItemsTab } from '../components/inventory/ItemsTab';
 import { WarehousesTab } from '../components/inventory/WarehousesTab';
 import { LotsTab } from '../components/inventory/LotsTab';
 import { MovementsTab } from '../components/inventory/MovementsTab';
-import { Package, Warehouse, Boxes, ArrowLeftRight } from 'lucide-react';
+import { CategoriesTab } from '../components/inventory/CategoriesTab';
+import { Package, Warehouse, Boxes, ArrowLeftRight, Tag } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 export const InventoryManagementPage = () => {
@@ -21,10 +22,15 @@ export const InventoryManagementPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 overflow-x-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 overflow-x-auto">
           <TabsTrigger value="items" className="flex items-center gap-2 text-xs sm:text-sm">
             <Package className="h-4 w-4" />
             {t('inventory.items')}
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="flex items-center gap-2 text-xs sm:text-sm">
+            <Tag className="h-4 w-4" />
+            <span className="hidden sm:inline">{t('inventory.categories')}</span>
+            <span className="sm:hidden">{t('inventory.categoriesShort')}</span>
           </TabsTrigger>
           <TabsTrigger value="warehouses" className="flex items-center gap-2 text-xs sm:text-sm">
             <Warehouse className="h-4 w-4" />
@@ -44,6 +50,10 @@ export const InventoryManagementPage = () => {
 
         <TabsContent value="items" className="mt-6">
           <ItemsTab />
+        </TabsContent>
+
+        <TabsContent value="categories" className="mt-6">
+          <CategoriesTab />
         </TabsContent>
 
         <TabsContent value="warehouses" className="mt-6">

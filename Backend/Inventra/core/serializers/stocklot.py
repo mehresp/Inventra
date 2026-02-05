@@ -4,6 +4,7 @@ Serializers for StockLot model.
 from rest_framework import serializers
 from django.utils import timezone
 from datetime import timedelta
+from decimal import Decimal
 from ..models import StockLot, Item, Warehouse
 
 
@@ -13,6 +14,7 @@ class StockLotSerializer(serializers.ModelSerializer):
     warehouse_name = serializers.CharField(source='for_warehouse.name', read_only=True)
     status = serializers.SerializerMethodField()
     days_until_expiry = serializers.SerializerMethodField()
+    qty = serializers.DecimalField(max_digits=14, decimal_places=3, coerce_to_string=False)
     
     class Meta:
         model = StockLot
@@ -22,6 +24,13 @@ class StockLotSerializer(serializers.ModelSerializer):
             'expiry_date', 'qty', 'status', 'days_until_expiry'
         ]
         read_only_fields = ['id']
+    
+    def to_representation(self, instance):
+        """Convert Decimal fields to float for JSON serialization."""
+        ret = super().to_representation(instance)
+        if 'qty' in ret and isinstance(ret['qty'], Decimal):
+            ret['qty'] = float(ret['qty'])
+        return ret
     
     def get_status(self, obj):
         if not obj.expiry_date:

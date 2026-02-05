@@ -419,8 +419,18 @@ const RequisitionDetails = ({
         </Table>
       </div>
 
+      {/* Rejection Reason */}
+      {requisition.status === 'Rejected' && requisition.notes && requisition.notes.includes('Rejection reason:') && (
+        <div>
+          <label className="text-sm font-medium text-gray-500">{t('requisitions.rejectionReason')}</label>
+          <p className="text-base bg-red-50 border border-red-200 p-3 rounded text-red-800">
+            {requisition.notes.split('Rejection reason:')[1]?.trim() || requisition.notes}
+          </p>
+        </div>
+      )}
+
       {/* Notes */}
-      {requisition.notes && (
+      {requisition.notes && !(requisition.status === 'Rejected' && requisition.notes.includes('Rejection reason:')) && (
         <div>
           <label className="text-sm font-medium text-gray-500">{t('requisitions.notes')}</label>
           <p className="text-base bg-gray-50 p-3 rounded">{requisition.notes}</p>
@@ -429,7 +439,7 @@ const RequisitionDetails = ({
 
       {/* Actions */}
       <div className="flex gap-2 pt-4 border-t">
-        {canApprove && requisition.status === 'Pending' && (
+        {canApprove && ['Draft', 'Pending', 'Rejected'].includes(requisition.status) && (
           <>
             <Button onClick={onApprove} disabled={isApproving} className="flex-1">
               {isApproving ? t('requisitions.approving') : t('requisitions.approve')}
@@ -443,6 +453,16 @@ const RequisitionDetails = ({
               {isRejecting ? t('requisitions.rejecting') : t('requisitions.reject')}
             </Button>
           </>
+        )}
+        {canApprove && requisition.status === 'Approved' && (
+          <Button
+            variant="destructive"
+            onClick={onReject}
+            disabled={isRejecting}
+            className="flex-1"
+          >
+            {isRejecting ? t('requisitions.rejecting') : t('requisitions.reject')}
+          </Button>
         )}
         {canFulfill && requisition.status === 'Approved' && (
           <Button onClick={onFulfill} disabled={isFulfilling} className="flex-1">

@@ -27,6 +27,7 @@ SECRET_KEY = config('DJANGO_SECRET_KEY', default='django-insecure-25h1p!dkey7vz+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = True
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=Csv())
 
@@ -169,24 +170,24 @@ CORS_ALLOWED_ORIGINS = config(
 CORS_ALLOW_CREDENTIALS = True
 
 # Redis Configuration
-REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': REDIS_URL,
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
-    }
-}
+#REDIS_URL = config('REDIS_URL', default='redis://localhost:6379/0')
+#CACHES = {
+#    'default': {
+#        'BACKEND': 'django_redis.cache.RedisCache',
+#        'LOCATION': REDIS_URL,
+#        'OPTIONS': {
+#            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#        }
+#    }
+#}
 
 # Celery Configuration
-CELERY_BROKER_URL = config('CELERY_BROKER_URL', default=REDIS_URL)
-CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default=REDIS_URL)
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
+#CELERY_BROKER_URL = config('CELERY_BROKER_URL', default=REDIS_URL)
+#CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default=REDIS_URL)
+#CELERY_ACCEPT_CONTENT = ['json']
+#CELERY_TASK_SERIALIZER = 'json'
+#CELERY_RESULT_SERIALIZER = 'json'
+#CELERY_TIMEZONE = 'UTC'
 
 # Django REST Framework
 REST_FRAMEWORK = {
@@ -212,6 +213,10 @@ REST_FRAMEWORK = {
         'anon': '100/hour',
         'user': '1000/hour'
     },
+    'DEFAULT_RENDERER_CLASSES': [
+        'core.utils.DecimalJSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
 }

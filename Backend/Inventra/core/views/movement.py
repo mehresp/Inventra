@@ -67,9 +67,14 @@ class MovementViewSet(viewsets.ModelViewSet):
         serializer.instance = movement
     
     def create(self, request, *args, **kwargs):
-        """Override create to handle service errors."""
+        """Override create to handle service errors and ensure proper serialization."""
         try:
-            return super().create(request, *args, **kwargs)
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            # Use serializer.data to ensure Decimal fields are properly converted
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except Exception as e:
             return Response(
                 {'error': {'code': 400, 'message': str(e), 'details': {}}},

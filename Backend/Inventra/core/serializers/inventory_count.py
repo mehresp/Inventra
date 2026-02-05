@@ -2,6 +2,7 @@
 Serializers for InventoryCount and InventoryCountLine models.
 """
 from rest_framework import serializers
+from decimal import Decimal
 from ..models import InventoryCount, InventoryCountLine, Warehouse, Item
 
 
@@ -9,6 +10,9 @@ class InventoryCountLineSerializer(serializers.ModelSerializer):
     item_code = serializers.CharField(source='for_item.code', read_only=True)
     item_name = serializers.CharField(source='for_item.name', read_only=True)
     item_unit = serializers.CharField(source='for_item.unit', read_only=True)
+    system_qty = serializers.DecimalField(max_digits=14, decimal_places=3, coerce_to_string=False)
+    counted_qty = serializers.DecimalField(max_digits=14, decimal_places=3, coerce_to_string=False)
+    delta = serializers.DecimalField(max_digits=14, decimal_places=3, coerce_to_string=False)
     
     class Meta:
         model = InventoryCountLine
@@ -17,6 +21,14 @@ class InventoryCountLineSerializer(serializers.ModelSerializer):
             'system_qty', 'counted_qty', 'delta'
         ]
         read_only_fields = ['id']
+    
+    def to_representation(self, instance):
+        """Convert Decimal fields to float for JSON serialization."""
+        ret = super().to_representation(instance)
+        for field in ['system_qty', 'counted_qty', 'delta']:
+            if field in ret and isinstance(ret[field], Decimal):
+                ret[field] = float(ret[field])
+        return ret
 
 
 class InventoryCountSerializer(serializers.ModelSerializer):

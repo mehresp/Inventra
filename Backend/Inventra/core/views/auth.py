@@ -13,6 +13,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 
 from ..serializers import UserSerializer, UserProfileSerializer
 from ..models import Role, UserProfile
+from ..permissions import CanManageUsers
 
 User = get_user_model()
 
@@ -74,73 +75,103 @@ class LoginView(APIView):
 class RegisterView(APIView):
     """
     Register view for creating new users.
+    Only Admin can create users through this endpoint.
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated, CanManageUsers]
     
     def post(self, request):
-        username = request.data.get('username')
-        email = request.data.get('email')
-        password = request.data.get('password')
-        first_name = request.data.get('first_name', '')
-        last_name = request.data.get('last_name', '')
-        role_id = request.data.get('role_id')
-        
-        if not username or not email or not password:
-            return Response(
-                {'error': {'code': 400, 'message': 'Username, email, and password are required', 'details': {}}},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        if User.objects.filter(username=username).exists():
-            return Response(
-                {'error': {'code': 400, 'message': 'Username already exists', 'details': {}}},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        if User.objects.filter(email=email).exists():
-            return Response(
-                {'error': {'code': 400, 'message': 'Email already exists', 'details': {}}},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Validate password
         try:
-            validate_password(password)
-        except DjangoValidationError as e:
-            return Response(
-                {'error': {'code': 400, 'message': 'Invalid password', 'details': {'errors': list(e.messages)}}},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Create user
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name
-        )
-        
-        # Create profile with default role (Requester) or specified role
-        if role_id:
+            username = request.data.get('username')
+            email = request.data.get('email')
+            password = request.data.get('password')
+            first_name = request.data.get('first_name', '')
+            last_name = request.data.get('last_name', '')
+            role_id = request.data.get('role_id')
+            
+            # Convert role_id to int if it's provided
+            if role_id is not None:
+                try:
+                    role_id = int(role_id)
+                except (ValueError, TypeError):
+                    role_id = None
+            
+            if not username or not email or not password:
+                return Response(
+                    {'error': {'code': 400, 'message': 'Username, email, and password are required', 'details': {}}},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if User.objects.filter(username=username).exists():
+                return Response(
+                    {'error': {'code': 400, 'message': 'Username already exists', 'details': {}}},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if User.objects.filter(email=email).exists():
+                return Response(
+                    {'error': {'code': 400, 'message': 'Email already exists', 'details': {}}},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Validate password
             try:
-                role = Role.objects.get(id=role_id)
-            except Role.DoesNotExist:
-                role = Role.objects.get(name=Role.Name.REQUESTER)
-        else:
-            role = Role.objects.get(name=Role.Name.REQUESTER)
-        
-        UserProfile.objects.create(user=user, for_role=role)
-        
-        # Generate tokens
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-            'user': UserSerializer(user).data,
-            'role': role.name
-        }, status=status.HTTP_201_CREATED)
+                validate_password(password)
+            except DjangoValidationError as e:
+                return Response(
+                    {'error': {'code': 400, 'message': 'Invalid password', 'details': {'errors': list(e.messages)}}},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get role
+            role = None
+            if role_id:
+                try:
+                    role = Role.objects.get(id=role_id)
+                except (Role.DoesNotExist, ValueError, TypeError) as e:
+                    # If role_id doesn't exist or is invalid, try to get Requester role
+                    try:
+                        role = Role.objects.get(name=Role.Name.REQUESTER)
+                    except Role.DoesNotExist:
+                        return Response(
+                            {'error': {'code': 500, 'message': f'Role with id {role_id} not found and default role (Requester) not found. Please contact administrator.', 'details': {'role_id': role_id, 'error': str(e)}}},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                        )
+            else:
+                # Default to Requester role
+                try:
+                    role = Role.objects.get(name=Role.Name.REQUESTER)
+                except Role.DoesNotExist:
+                    return Response(
+                        {'error': {'code': 500, 'message': 'Default role (Requester) not found. Please contact administrator.', 'details': {}}},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name
+            )
+            
+            # Create profile
+            UserProfile.objects.create(user=user, for_role=role)
+            
+            # Generate tokens
+            refresh = RefreshToken.for_user(user)
+            
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'user': UserSerializer(user).data,
+                'role': role.name
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response(
+                {'error': {'code': 500, 'message': f'An error occurred while creating user: {str(e)}', 'details': {}}},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class UserProfileView(APIView):
